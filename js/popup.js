@@ -541,7 +541,7 @@
         pendingDeleteId = null;
         closeModal(deleteModal);
         await loadAccounts();
-        showToast(`Deleted ${deleted ? deleted.issuer : 'account'}`);
+        showToast(`Deleted ${deleted && deleted.issuer ? deleted.issuer : 'account'}`);
       }
     });
 

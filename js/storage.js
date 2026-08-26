@@ -324,12 +324,12 @@
    */
   async function deleteAccount(id) {
     const accounts = await getAccounts();
+    const target = accounts.find(a => a.id === id);
+    if (!target) return null;
+
     const filtered = accounts.filter(a => a.id !== id);
-    if (filtered.length !== accounts.length) {
-      await saveAccounts(filtered);
-      return true;
-    }
-    return false;
+    await saveAccounts(filtered);
+    return target;
   }
 
   /**
