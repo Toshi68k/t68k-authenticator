@@ -52,6 +52,22 @@
   const backupFileInput = document.getElementById('backup-file-input');
   const toggleCloudSync = document.getElementById('toggle-cloud-sync');
 
+  // Export Modal Elements
+  const exportModal = document.getElementById('export-modal');
+  const btnCloseExportModal = document.getElementById('btn-close-export-modal');
+  const btnCancelExport = document.getElementById('btn-cancel-export');
+  const formExportBackup = document.getElementById('form-export-backup');
+  const inputExportPassword = document.getElementById('input-export-password');
+  const inputExportPasswordConfirm = document.getElementById('input-export-password-confirm');
+  const exportConfirmGroup = document.getElementById('export-confirm-group');
+
+  // Decrypt Modal Elements
+  const decryptModal = document.getElementById('decrypt-modal');
+  const btnCloseDecryptModal = document.getElementById('btn-close-decrypt-modal');
+  const btnCancelDecrypt = document.getElementById('btn-cancel-decrypt');
+  const formDecryptImport = document.getElementById('form-decrypt-import');
+  const inputDecryptPassword = document.getElementById('input-decrypt-password');
+
   // Theme Elements
   const btnThemeToggle = document.getElementById('btn-theme-toggle');
   const selectThemeSetting = document.getElementById('select-theme-setting');
@@ -62,6 +78,7 @@
   let accounts = [];
   let currentFilter = '';
   let pendingDeleteId = null;
+  let pendingEncryptedBackupContent = null;
   let toastTimeout = null;
   let currentTheme = 'light';
   let currentThemeColor = 'green';
@@ -549,35 +566,149 @@
     btnOpenSettings.addEventListener('click', () => openModal(settingsModal));
     btnCloseSettings.addEventListener('click', () => closeModal(settingsModal));
 
-    btnExportBackup.addEventListener('click', async () => {
-      const backupJson = await T68kAuthStorage.exportBackup();
-      const blob = new Blob([backupJson], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `t68k-authenticator-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Backup downloaded!');
+    // Export Backup Flow
+    btnExportBackup.addEventListener('click', () => {
+      if (inputExportPassword) inputExportPassword.value = '';
+      if (inputExportPasswordConfirm) inputExportPasswordConfirm.value = '';
+      if (exportConfirmGroup) exportConfirmGroup.style.display = 'none';
+      openModal(exportModal);
+      if (inputExportPassword) inputExportPassword.focus();
     });
 
+    if (btnCloseExportModal) {
+      btnCloseExportModal.addEventListener('click', () => closeModal(exportModal));
+    }
+    if (btnCancelExport) {
+      btnCancelExport.addEventListener('click', () => closeModal(exportModal));
+    }
+
+    if (inputExportPassword && exportConfirmGroup) {
+      inputExportPassword.addEventListener('input', () => {
+        const hasText = inputExportPassword.value.length > 0;
+        exportConfirmGroup.style.display = hasText ? 'block' : 'none';
+        if (inputExportPasswordConfirm) {
+          inputExportPasswordConfirm.required = hasText;
+        }
+      });
+    }
+
+    if (formExportBackup) {
+      formExportBackup.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const password = inputExportPassword ? inputExportPassword.value : '';
+        const confirm = inputExportPasswordConfirm ? inputExportPasswordConfirm.value : '';
+
+        if (password) {
+          if (password !== confirm) {
+            showToast('Passwords do not match');
+            if (inputExportPasswordConfirm) inputExportPasswordConfirm.focus();
+            return;
+          }
+        }
+
+        try {
+          const backupJson = await T68kAuthStorage.exportBackup(password || null);
+          const blob = new Blob([backupJson], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const ext = password ? 'enc.json' : 'json';
+          a.download = `t68k-authenticator-backup-${new Date().toISOString().slice(0, 10)}.${ext}`;
+          a.click();
+          URL.revokeObjectURL(url);
+          closeModal(exportModal);
+          showToast(password ? '🔒 Encrypted backup downloaded!' : 'Backup downloaded!');
+        } catch (err) {
+          showToast(`Export failed: ${err.message}`);
+        }
+      });
+    }
+
+    // Import Backup Flow
     btnImportBackup.addEventListener('click', () => backupFileInput.click());
     backupFileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = async (evt) => {
+        const fileContent = evt.target.result;
         try {
-          const result = await T68kAuthStorage.importBackup(evt.target.result);
+          const result = await T68kAuthStorage.importBackup(fileContent);
           await loadAccounts();
           closeModal(settingsModal);
           showToast(`Imported ${result.importedCount} accounts!`);
         } catch (err) {
-          showToast(`Import failed: ${err.message}`);
+          if (err.isEncrypted) {
+            // Prompt for password via Decrypt Modal
+            pendingEncryptedBackupContent = fileContent;
+            if (inputDecryptPassword) inputDecryptPassword.value = '';
+            closeModal(settingsModal);
+            openModal(decryptModal);
+            if (inputDecryptPassword) inputDecryptPassword.focus();
+          } else {
+            showToast(`Import failed: ${err.message}`);
+          }
         }
       };
       reader.readAsText(file);
       e.target.value = '';
+    });
+
+    // Decrypt & Import Flow
+    if (btnCloseDecryptModal) {
+      btnCloseDecryptModal.addEventListener('click', () => {
+        pendingEncryptedBackupContent = null;
+        closeModal(decryptModal);
+      });
+    }
+    if (btnCancelDecrypt) {
+      btnCancelDecrypt.addEventListener('click', () => {
+        pendingEncryptedBackupContent = null;
+        closeModal(decryptModal);
+      });
+    }
+
+    if (formDecryptImport) {
+      formDecryptImport.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!pendingEncryptedBackupContent) {
+          closeModal(decryptModal);
+          return;
+        }
+
+        const password = inputDecryptPassword ? inputDecryptPassword.value : '';
+        try {
+          const result = await T68kAuthStorage.importBackup(pendingEncryptedBackupContent, password);
+          pendingEncryptedBackupContent = null;
+          closeModal(decryptModal);
+          await loadAccounts();
+          showToast(`🔓 Decrypted and imported ${result.importedCount} accounts!`);
+        } catch (err) {
+          showToast(err.message || 'Incorrect password');
+          if (inputDecryptPassword) {
+            inputDecryptPassword.select();
+            inputDecryptPassword.focus();
+          }
+        }
+      });
+    }
+
+    // Keyboard navigation (Escape to close modals, Enter/Space on cards)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const activeModals = document.querySelectorAll('.modal-overlay.active');
+        activeModals.forEach(m => closeModal(m));
+      }
+    });
+
+    accountListEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        const card = e.target.closest('.totp-card');
+        if (card && (e.target === card || !e.target.closest('button'))) {
+          e.preventDefault();
+          copyAccountCode(card.dataset.id);
+        }
+      }
     });
 
     // Theme Controls
@@ -628,12 +759,14 @@
     }
 
     // Close modals on overlay backdrop click
-    [addModal, deleteModal, settingsModal].forEach(modal => {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          closeModal(modal);
-        }
-      });
+    [addModal, deleteModal, settingsModal, exportModal, decryptModal].forEach(modal => {
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            closeModal(modal);
+          }
+        });
+      }
     });
   }
 

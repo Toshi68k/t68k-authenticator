@@ -346,9 +346,10 @@
   }
 
   /**
-   * Exports backup JSON string
+   * Exports backup JSON string (optionally encrypted with password)
+   * @param {string|null} password
    */
-  async function exportBackup() {
+  async function exportBackup(password = null) {
     const accounts = await getAccounts();
     const payload = {
       version: 1,
@@ -364,18 +365,44 @@
         pinned: !!a.pinned
       }))
     };
+
+    if (password && typeof password === 'string' && password.trim().length > 0) {
+      const encryptedEnvelope = await T68kAuthCrypto.encryptData(
+        JSON.stringify(payload),
+        password
+      );
+      return JSON.stringify(encryptedEnvelope, null, 2);
+    }
+
     return JSON.stringify(payload, null, 2);
   }
 
   /**
-   * Imports backup JSON string
+   * Imports backup JSON string (optionally decrypting with password)
+   * @param {string} jsonString
+   * @param {string|null} password
    */
-  async function importBackup(jsonString) {
+  async function importBackup(jsonString, password = null) {
     let parsed;
     try {
       parsed = JSON.parse(jsonString);
     } catch {
       throw new Error('Invalid JSON format');
+    }
+
+    // Check if backup is encrypted
+    if (parsed && (parsed.encrypted === true || (parsed.crypto && parsed.cipherText))) {
+      if (!password) {
+        const err = new Error('This backup is encrypted with a password.');
+        err.isEncrypted = true;
+        throw err;
+      }
+      const decryptedJson = await T68kAuthCrypto.decryptData(parsed, password);
+      try {
+        parsed = JSON.parse(decryptedJson);
+      } catch {
+        throw new Error('Decrypted backup contains invalid data');
+      }
     }
 
     const incoming = Array.isArray(parsed) ? parsed : (parsed.accounts || []);
