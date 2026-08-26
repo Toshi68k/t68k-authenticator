@@ -203,11 +203,10 @@
     const clean = issuerName.trim();
     const initial = (clean.charAt(0) || '?').toUpperCase();
 
-    // Curated brand color mapping
-    // Add your own issuer -> color mappings here
     const nameLower = clean.toLowerCase();
     const brands = [
       { key: 'amazon web services', color: '#ec7211' },
+      { key: 'aws', color: '#ec7211' },
     ];
 
     for (const b of brands) {
@@ -230,6 +229,144 @@
     };
   }
 
+  /**
+   * Converts Uint8Array to base64 string
+   */
+  function bytesToBase64(bytes) {
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  /**
+   * Converts base64 string to Uint8Array
+   */
+  function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  /**
+   * Encrypts plaintext string using AES-GCM (256-bit) and PBKDF2 key derivation.
+   * @param {string} plainText
+   * @param {string} password
+   * @returns {Promise<Object>}
+   */
+  async function encryptData(plainText, password) {
+    if (!password || typeof password !== 'string') {
+      throw new Error('Password is required for encryption');
+    }
+
+    const enc = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const iterations = 100000;
+
+    const passwordKey = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+
+    const derivedKey = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt,
+        iterations,
+        hash: 'SHA-256'
+      },
+      passwordKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt']
+    );
+
+    const cipherBuffer = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      derivedKey,
+      enc.encode(plainText)
+    );
+
+    return {
+      version: 1,
+      encrypted: true,
+      exportedAt: new Date().toISOString(),
+      generator: 'T68k Authenticator Chrome Extension',
+      crypto: {
+        algorithm: 'AES-GCM',
+        kdf: 'PBKDF2',
+        hash: 'SHA-256',
+        iterations,
+        salt: bytesToBase64(salt),
+        iv: bytesToBase64(iv)
+      },
+      cipherText: bytesToBase64(new Uint8Array(cipherBuffer))
+    };
+  }
+
+  /**
+   * Decrypts an encrypted envelope using AES-GCM and password.
+   * @param {Object} envelope
+   * @param {string} password
+   * @returns {Promise<string>} Plaintext string
+   */
+  async function decryptData(envelope, password) {
+    if (!envelope || !envelope.cipherText || !envelope.crypto) {
+      throw new Error('Invalid encrypted backup format');
+    }
+    if (!password || typeof password !== 'string') {
+      throw new Error('Password is required for decryption');
+    }
+
+    const { salt, iv, iterations = 100000, hash = 'SHA-256' } = envelope.crypto;
+    const saltBytes = base64ToBytes(salt);
+    const ivBytes = base64ToBytes(iv);
+    const cipherBytes = base64ToBytes(envelope.cipherText);
+
+    const enc = new TextEncoder();
+    const passwordKey = await crypto.subtle.importKey(
+      'raw',
+      enc.encode(password),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+
+    const derivedKey = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: saltBytes,
+        iterations,
+        hash
+      },
+      passwordKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+
+    try {
+      const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: ivBytes },
+        derivedKey,
+        cipherBytes
+      );
+      const dec = new TextDecoder();
+      return dec.decode(decryptedBuffer);
+    } catch (e) {
+      throw new Error('Incorrect password or corrupted backup file');
+    }
+  }
+
   global.T68kAuthCrypto = {
     base32Decode,
     isValidBase32,
@@ -237,6 +374,10 @@
     formatCode,
     getValidityInfo,
     parseOTPAuthURI,
-    getIssuerBrandInfo
+    getIssuerBrandInfo,
+    bytesToBase64,
+    base64ToBytes,
+    encryptData,
+    decryptData
   };
 })(typeof window !== 'undefined' ? window : this);

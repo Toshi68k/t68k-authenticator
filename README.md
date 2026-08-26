@@ -28,9 +28,9 @@
   - Instant real-time fuzzy search and filtering
   - Pin favorite accounts to the top of your list
   - Automatic brand color matching
-- 💾 **Data Portability & Sync**:
+- 💾 **Data Portability & Encrypted Backups**:
   - Local-first security by default (`chrome.storage.local`); optional Chrome Cloud Sync (`chrome.storage.sync`) can be enabled with automatic bidirectional migration (local ↔ cloud)
-  - Full JSON backup export and import functionality
+  - Full JSON backup export and import functionality with **optional 256-bit AES-GCM password encryption** (key derivation from password using PBKDF2 SHA-256 with 100,000 iterations)
 
 ---
 
@@ -82,8 +82,12 @@ Since T68k Authenticator is built as a standard Manifest V3 extension, you can e
 ### Backup & Restore
 
 1. Click the **Settings (⚙️)** icon in the top header.
-2. Click **Export JSON** to download an encrypted/raw backup file containing your tokens.
-3. Click **Import JSON** to restore or merge tokens from a previously exported backup file.
+2. Click **Export JSON**:
+   - Optionally enter an encryption password to protect your backup with 256-bit AES-GCM (saves as `.enc.json`).
+   - Or leave the password field blank to export a standard plaintext JSON backup.
+3. Click **Import JSON** to restore or merge tokens:
+   - If importing an encrypted backup file, enter the password when prompted to decrypt and restore accounts.
+   - If importing a plaintext backup, tokens are imported immediately.
 
 ---
 
@@ -119,7 +123,8 @@ t68k-authenticator/
 ## 🛡️ Security & Privacy
 
 - **No Remote Network Requests**: T68k Authenticator has no network permissions (`http://*` or `https://*` are deliberately omitted from permissions). It cannot transmit your secret keys over the internet.
-- **Cryptographic Security**: HMAC-SHA1, HMAC-SHA256, and HMAC-SHA512 calculations use the browser's hardware-accelerated, cryptographically secure `window.crypto.subtle`.
+- **Cryptographic Security**: HMAC-SHA1, HMAC-SHA256, and HMAC-SHA512 calculations and PBKDF2/AES-GCM backup encryption use the browser's hardware-accelerated, cryptographically secure `window.crypto.subtle`.
+- **Encrypted Backups**: Backups can be password-protected using PBKDF2 key derivation (SHA-256, 100,000 iterations, 16-byte random salt) and 256-bit AES-GCM authenticated encryption.
 - **Active Tab Permission**: The `activeTab` permission is strictly used to capture the visual screenshot of the current tab on user demand when clicking "Scan QR from Screen".
 
 ---
