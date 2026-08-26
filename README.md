@@ -40,7 +40,7 @@ Since T68k Authenticator is built as a standard Manifest V3 extension, you can e
 
 0. **Clone or Download** this repository:
    ```bash
-   git clone https://codeberg.org/Toshi68k/t68k-authenticator.git
+   git clone https://github.com/Toshi68k/t68k-authenticator.git
    ```
 
 ### Chromium-based browsers
