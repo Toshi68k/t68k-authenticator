@@ -51,7 +51,7 @@ Since T68k Authenticator is built as a standard Manifest V3 extension, you can e
    - Edge: `edge://extensions`
 2. Enable **Developer mode** (toggle in the top-right corner).
 3. Click **Load unpacked**.
-4. Select the `chrome-totp` project folder.
+4. Select the `t68k-authenticator` project folder.
 5. Pin **T68k Authenticator** to your browser toolbar for quick access!
 
 ### 🦊 Firefox
@@ -90,7 +90,7 @@ Since T68k Authenticator is built as a standard Manifest V3 extension, you can e
 ## 📂 Project Structure
 
 ```text
-chrome-totp/
+t68k-authenticator/
 ├── manifest.json        # Extension Manifest V3 configuration
 ├── popup.html           # Main extension popup interface
 ├── css/
