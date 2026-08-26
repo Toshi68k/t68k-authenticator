@@ -85,14 +85,8 @@
 
     // Scan for finder patterns (1:1:3:1:1 ratio)
     const finderPatterns = findFinderPatterns(binarized, width, height);
-    if (finderPatterns.length >= 3) {
-      const qrData = decodeMatrix(binarized, width, height, finderPatterns, imageData);
-      if (qrData) return { data: qrData };
-    }
-
-    // Direct jsQR attempt for maximum decoding resilience
-    const qrDataDirect = decodeMatrix(binarized, width, height, finderPatterns, imageData);
-    if (qrDataDirect) return { data: qrDataDirect };
+    const qrData = decodeMatrix(binarized, width, height, finderPatterns, imageData);
+    if (qrData) return { data: qrData };
 
     return null;
   }
