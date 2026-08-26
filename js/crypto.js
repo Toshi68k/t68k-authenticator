@@ -203,8 +203,7 @@
     const clean = issuerName.trim();
     const initial = (clean.charAt(0) || '?').toUpperCase();
 
-    // Curated brand color mapping
-    // Add your own issuer -> color mappings here
+    const nameLower = clean.toLowerCase();
     const brands = [
       { key: 'amazon web services', color: '#ec7211' },
       { key: 'aws', color: '#ec7211' },
