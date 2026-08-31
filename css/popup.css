@@ -407,7 +407,7 @@ body.theme-light .btn-secondary:hover {
 
 /* App Header */
 .app-header {
-  padding: 16px 18px 12px;
+  padding: 13px 16px 11px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -420,7 +420,9 @@ body.theme-light .btn-secondary:hover {
 .brand-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .brand-logo {
@@ -432,6 +434,7 @@ body.theme-light .btn-secondary:hover {
   justify-content: center;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-gradient-end));
   box-shadow: 0 0 12px var(--accent-glow);
+  flex-shrink: 0;
 }
 
 .brand-logo svg {
@@ -441,9 +444,10 @@ body.theme-light .btn-secondary:hover {
 }
 
 .brand-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.3px;
+  white-space: nowrap;
   background: linear-gradient(135deg, #ffffff 40%, #94a3b8);
   -webkit-background-clip: text;
   background-clip: text;
@@ -453,7 +457,8 @@ body.theme-light .btn-secondary:hover {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 /* Icon Buttons */
@@ -1302,4 +1307,201 @@ body.theme-light .slider {
 body.theme-light .color-swatch.active {
   border-color: #ffffff;
   box-shadow: 0 0 0 2px var(--swatch-color), 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   Autofill, Smart Domain Matching & Vim Navigation Styles
+   ========================================================================== */
+
+/* Search KBD Hint */
+.search-kbd-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-right: 4px;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+body.theme-light .search-kbd-hint {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text-secondary);
+}
+
+/* Card Index Hint (for 1-9 shortcuts) */
+.card-index-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-left: 6px;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+/* Smart Domain Matching Badges */
+.badge-suggested {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-full);
+  padding: 2px 7px;
+  letter-spacing: 0.02em;
+  animation: pulse-glow 3s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+}
+
+.totp-card.suggested-site {
+  border-color: var(--accent-border);
+  box-shadow: 0 4px 18px -2px var(--accent-glow);
+  position: relative;
+}
+
+.totp-card.suggested-site::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-gradient-end));
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+/* Vim Selection Focus Cursor */
+.totp-card.vim-selected {
+  outline: 2px solid var(--accent-primary) !important;
+  outline-offset: 1px;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 16px var(--accent-glow), var(--shadow-card);
+  transform: translateY(-1px) scale(1.01);
+}
+
+body.theme-light .totp-card.vim-selected {
+  outline: 2px solid var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 14px var(--accent-glow), 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+/* Autofill Button */
+.btn-card-action.btn-autofill {
+  color: var(--accent-primary);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  position: relative;
+}
+
+.btn-card-action.btn-autofill:hover {
+  background: var(--accent-muted);
+  color: var(--accent-primary-hover);
+  transform: scale(1.08);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* Vim Pill in Modals */
+.vim-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--accent-primary);
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* Shortcuts Cheat Sheet Modal Content */
+.shortcuts-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.shortcut-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-top: 10px;
+  margin-bottom: 2px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.shortcut-section-title:first-child {
+  margin-top: 0;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  transition: background 0.15s ease;
+}
+
+.shortcut-row:hover {
+  background: var(--bg-glass);
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.shortcut-desc {
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: right;
+}
+
+kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 2px 5px;
+  display: inline-block;
+  line-height: 1;
+}
+
+body.theme-light kbd {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  color: #0f172a;
 }

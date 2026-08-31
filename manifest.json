@@ -5,8 +5,18 @@
   "description": "Sleek, private, and secure two-factor authentication manager with graphical countdowns and instant QR scanning.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+A",
+        "mac": "Alt+Shift+A"
+      },
+      "description": "Open T68k Authenticator"
+    }
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "T68k Authenticator",

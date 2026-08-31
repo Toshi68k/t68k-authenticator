@@ -23,25 +23,7 @@
     </div>
 
     <div class="header-actions">
-      <button class="btn-icon" id="btn-theme-toggle" title="Toggle Light / Dark Mode" aria-label="Toggle Light or Dark Mode">
-        <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
-          <circle cx="12" cy="12" r="5"></circle>
-          <line x1="12" y1="1" x2="12" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="23"></line>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-          <line x1="1" y1="12" x2="3" y2="12"></line>
-          <line x1="21" y1="12" x2="23" y2="12"></line>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-        <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-        </svg>
-      </button>
-      <button class="btn-icon" id="btn-scan-screen-quick" title="Scan QR from Active Tab" aria-label="Scan QR Code from Screen">
+      <button class="btn-icon" id="btn-scan-screen-quick" title="Scan QR from Active Tab (s)" aria-label="Scan QR Code from Screen">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -49,7 +31,7 @@
           <line x1="9" y1="21" x2="9" y2="9"></line>
         </svg>
       </button>
-      <button class="btn-icon btn-primary" id="btn-open-add-modal" title="Add 2FA Account" aria-label="Add 2FA Account">
+      <button class="btn-icon btn-primary" id="btn-open-add-modal" title="Add 2FA Account (o/n)" aria-label="Add 2FA Account">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
           stroke-linecap="round" stroke-linejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -83,6 +65,7 @@
       </svg>
       <input type="text" class="search-input" id="search-input" placeholder="Search accounts..." autocomplete="off"
         spellcheck="false">
+      <span class="search-kbd-hint" id="search-kbd-hint" title="Press / to search">/</span >
       <button class="search-clear-btn" id="search-clear-btn" title="Clear search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -348,6 +331,17 @@
           </div>
         </div>
 
+        <div class="setting-toggle-row" id="row-open-shortcuts" style="cursor: pointer; padding: 6px 0;">
+          <div class="setting-toggle-info">
+            <label class="form-label" style="margin-bottom: 0; cursor: pointer;">Keyboard Shortcuts</label>
+            <div class="setting-desc">Vim keybindings & quick actions cheat sheet</div>
+          </div>
+          <button type="button" class="btn-secondary" id="btn-settings-shortcuts"
+            style="font-size: 11px; padding: 4px 10px; height: auto;">
+            View (?)
+          </button>
+        </div>
+
         <div class="setting-footer-note">
           🔒 All 2FA secrets are processed locally via Web Crypto API.
         </div>
@@ -434,6 +428,46 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Keyboard & Vim Shortcuts Modal -->
+  <div class="modal-overlay" id="shortcuts-modal">
+    <div class="modal-sheet" style="max-height: 520px;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <h2 class="modal-title">Keyboard & Vim Shortcuts</h2>
+          <span class="vim-pill">VIM</span>
+        </div>
+        <button class="btn-icon" id="btn-close-shortcuts-modal" aria-label="Close shortcuts modal">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="shortcuts-table-container">
+        <div class="shortcut-section-title">Navigation (Normal Mode)</div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>j</kbd> / <kbd>k</kbd> or <kbd>↓</kbd> / <kbd>↑</kbd></span><span class="shortcut-desc">Move selection down / up</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>g</kbd><kbd>g</kbd> / <kbd>G</kbd></span><span class="shortcut-desc">Jump to top / bottom</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>/</kbd></span><span class="shortcut-desc">Focus search bar</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>1</kbd>–<kbd>9</kbd></span><span class="shortcut-desc">Quick jump & copy nth account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Esc</kbd></span><span class="shortcut-desc">Unfocus search / close modal</span></div>
+
+        <div class="shortcut-section-title">Account Actions (Highlighted Card)</div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>y</kbd> / <kbd>c</kbd> or <kbd>Enter</kbd></span><span class="shortcut-desc">Yank / Copy active 2FA code</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>f</kbd> / <kbd>a</kbd></span><span class="shortcut-desc">⚡ Autofill code into web page</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>p</kbd></span><span class="shortcut-desc">Toggle pin / unpin account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>d</kbd><kbd>d</kbd></span><span class="shortcut-desc">Delete selected account</span></div>
+
+        <div class="shortcut-section-title">Global Shortcuts</div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>o</kbd> / <kbd>n</kbd></span><span class="shortcut-desc">Add new 2FA account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>s</kbd></span><span class="shortcut-desc">Scan QR from active screen</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>t</kbd></span><span class="shortcut-desc">Toggle light / dark theme</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>?</kbd></span><span class="shortcut-desc">Show / hide this shortcuts cheat sheet</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Open extension from anywhere</span></div>
+      </div>
     </div>
   </div>
 

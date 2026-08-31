@@ -16,6 +16,7 @@
   const addModal = document.getElementById('add-modal');
   const deleteModal = document.getElementById('delete-modal');
   const settingsModal = document.getElementById('settings-modal');
+  const shortcutsModal = document.getElementById('shortcuts-modal');
   const toastEl = document.getElementById('toast');
   const toastMsgEl = document.getElementById('toast-message');
 
@@ -52,6 +53,12 @@
   const backupFileInput = document.getElementById('backup-file-input');
   const toggleCloudSync = document.getElementById('toggle-cloud-sync');
 
+  // Shortcuts Modal Elements
+  const btnOpenShortcuts = document.getElementById('btn-open-shortcuts');
+  const btnSettingsShortcuts = document.getElementById('btn-settings-shortcuts');
+  const rowOpenShortcuts = document.getElementById('row-open-shortcuts');
+  const btnCloseShortcutsModal = document.getElementById('btn-close-shortcuts-modal');
+
   // Export Modal Elements
   const exportModal = document.getElementById('export-modal');
   const btnCloseExportModal = document.getElementById('btn-close-export-modal');
@@ -84,13 +91,26 @@
   let currentThemeColor = 'green';
   let codeCache = {}; // { [accountId]: { code: string, epochWindow: number } }
 
+  // Active Tab & Browser Integration State
+  let activeTabDomain = '';
+  let activeTabUrl = '';
+  let activeTabId = null;
+
+  // Vim Mode & Selection State
+  let selectedVimIndex = 0;
+  let currentDisplayedAccounts = [];
+  let gKeyPressTimer = null;
+  let dKeyPressTimer = null;
+
   /**
    * Initialize Application
    */
   async function init() {
+    await fetchActiveTabInfo();
     await initTheme();
     await initSyncSetting();
     setupEventListeners();
+    setupVimKeybindings();
     await loadAccounts();
     startTimerTicker();
   }
@@ -175,6 +195,69 @@
   }
 
   /**
+   * Retrieves active tab info (URL and ID) for smart domain matching & autofill
+   */
+  async function fetchActiveTabInfo() {
+    if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+      try {
+        const tabs = await new Promise((resolve) => {
+          chrome.tabs.query({ active: true, currentWindow: true }, resolve);
+        });
+        if (tabs && tabs[0]) {
+          activeTabId = tabs[0].id;
+          activeTabUrl = tabs[0].url || '';
+          if (activeTabUrl) {
+            try {
+              const urlObj = new URL(activeTabUrl);
+              activeTabDomain = urlObj.hostname.toLowerCase();
+            } catch {
+              activeTabDomain = '';
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not query active tab:', err);
+      }
+    }
+  }
+
+  /**
+   * Normalizes a hostname or service name for matching
+   */
+  function normalizeDomainKeyword(str) {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/^(www|login|auth|sso|id|accounts|app|my|signin|api)\./g, '')
+      .replace(/\.(com|org|net|io|co|dev|app|ai|me|cc|gov|edu)(\.[a-z]{2})?$/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  /**
+   * Checks if an account matches the active tab's domain
+   */
+  function isAccountMatchedToDomain(acc, domain) {
+    if (!domain || !acc) return false;
+    const domainKeyword = normalizeDomainKeyword(domain);
+    if (!domainKeyword || domainKeyword.length < 2) return false;
+
+    const issuerKeyword = normalizeDomainKeyword(acc.issuer || '');
+    const accountKeyword = normalizeDomainKeyword(acc.account || '');
+
+    if (issuerKeyword && (domainKeyword.includes(issuerKeyword) || issuerKeyword.includes(domainKeyword))) {
+      return true;
+    }
+    if (accountKeyword && accountKeyword.length >= 3 && domainKeyword.includes(accountKeyword)) {
+      return true;
+    }
+    if (acc.issuer && domain.includes(acc.issuer.toLowerCase())) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Loads accounts from persistent storage
    */
   async function loadAccounts() {
@@ -194,11 +277,20 @@
                (acc.account && acc.account.toLowerCase().includes(filter));
       })
       .sort((a, b) => {
+        const aMatched = !filter && isAccountMatchedToDomain(a, activeTabDomain);
+        const bMatched = !filter && isAccountMatchedToDomain(b, activeTabDomain);
+
+        if (aMatched !== bMatched) {
+          return aMatched ? -1 : 1;
+        }
+
         if (!!a.pinned !== !!b.pinned) {
           return a.pinned ? -1 : 1;
         }
         return (b.createdAt || 0) - (a.createdAt || 0);
       });
+
+    currentDisplayedAccounts = filtered;
 
     if (filtered.length === 0) {
       accountListEl.innerHTML = '';
@@ -215,21 +307,32 @@
 
     emptyStateEl.style.display = 'none';
 
+    // Clamp Vim selected index within bounds
+    if (selectedVimIndex < 0) selectedVimIndex = 0;
+    if (selectedVimIndex >= filtered.length) selectedVimIndex = filtered.length - 1;
+
     // Build markup for accounts
-    accountListEl.innerHTML = filtered.map(acc => {
+    accountListEl.innerHTML = filtered.map((acc, idx) => {
+      const isMatched = !filter && isAccountMatchedToDomain(acc, activeTabDomain);
+      const isVimSelected = idx === selectedVimIndex;
       const brand = T68kAuthCrypto.getIssuerBrandInfo(acc.issuer || 'Account');
       const cached = codeCache[acc.id] ? codeCache[acc.id].code : '------';
       const formattedCode = T68kAuthCrypto.formatCode(cached);
+      const keyHint = idx < 9 ? `<span class="card-index-hint" title="Press ${idx + 1} to copy">${idx + 1}</span>` : '';
 
       return `
-        <div class="totp-card ${acc.pinned ? 'pinned' : ''}" data-id="${acc.id}" tabindex="0">
+        <div class="totp-card ${acc.pinned ? 'pinned' : ''} ${isMatched ? 'suggested-site' : ''} ${isVimSelected ? 'vim-selected' : ''}" data-id="${acc.id}" data-index="${idx}" tabindex="0">
           <div class="card-header">
             <div class="account-info">
               <div class="account-avatar" style="background: ${brand.color}">
                 ${brand.initial}
               </div>
               <div class="account-meta">
-                <span class="account-issuer">${escapeHtml(acc.issuer || 'Account')}</span>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <span class="account-issuer">${escapeHtml(acc.issuer || 'Account')}</span>
+                  ${isMatched ? `<span class="badge-suggested">✨ Suggested</span>` : ''}
+                  ${keyHint}
+                </div>
                 ${acc.account ? `<span class="account-name">${escapeHtml(acc.account)}</span>` : ''}
               </div>
             </div>
@@ -247,18 +350,23 @@
           <div class="card-body">
             <div class="totp-code" id="code-${acc.id}">${formattedCode}</div>
             <div class="card-actions">
-              <button class="btn-card-action btn-pin ${acc.pinned ? 'active' : ''}" data-action="pin" data-id="${acc.id}" title="${acc.pinned ? 'Unpin account' : 'Pin to top'}">
+              <button class="btn-card-action btn-autofill" data-action="autofill" data-id="${acc.id}" title="Autofill code into web page (f)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+              </button>
+              <button class="btn-card-action btn-pin ${acc.pinned ? 'active' : ''}" data-action="pin" data-id="${acc.id}" title="${acc.pinned ? 'Unpin account' : 'Pin to top (p)'}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="${acc.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
               </button>
-              <button class="btn-card-action btn-copy" data-action="copy" data-id="${acc.id}" title="Copy code">
+              <button class="btn-card-action btn-copy" data-action="copy" data-id="${acc.id}" title="Copy code (y / Enter)">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
               </button>
-              <button class="btn-card-action btn-delete" data-action="delete" data-id="${acc.id}" title="Delete account">
+              <button class="btn-card-action btn-delete" data-action="delete" data-id="${acc.id}" title="Delete account (dd)">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -383,6 +491,362 @@
   }
 
   /**
+   * Autofills 2FA TOTP code directly into the active browser tab
+   */
+  async function autofillAccount(accId) {
+    const acc = accounts.find(a => a.id === accId);
+    if (!acc) return;
+
+    let code = codeCache[acc.id] ? codeCache[acc.id].code : null;
+    if (!code) {
+      code = await T68kAuthCrypto.generateTOTP(acc.secret, {
+        algorithm: acc.algorithm,
+        digits: acc.digits,
+        period: acc.period
+      });
+    }
+
+    const formattedCode = T68kAuthCrypto.formatCode(code);
+
+    // Also copy to clipboard for convenience
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch (e) {
+      const tempInput = document.createElement('input');
+      tempInput.value = code;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+    }
+
+    if (typeof chrome === 'undefined' || !chrome.scripting || !activeTabId) {
+      showToast(`Copied ${formattedCode} to clipboard!`);
+      return;
+    }
+
+    try {
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: activeTabId },
+        func: (otpCode) => {
+          function fillInput(el, val) {
+            el.focus();
+            el.value = val;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: val.slice(-1) }));
+            // Flash subtle green border highlight
+            const origTransition = el.style.transition;
+            const origBoxShadow = el.style.boxShadow;
+            const origBorder = el.style.border;
+            el.style.transition = 'all 0.3s ease';
+            el.style.boxShadow = '0 0 12px #10b981, 0 0 0 2px #10b981';
+            el.style.borderColor = '#10b981';
+            setTimeout(() => {
+              el.style.transition = origTransition;
+              el.style.boxShadow = origBoxShadow;
+              el.style.borderColor = origBorder;
+            }, 1800);
+          }
+
+          // 1. Look for segmented multi-box inputs (e.g. 6 separate input boxes)
+          const segmentedInputs = Array.from(
+            document.querySelectorAll(
+              'input[type="text"][maxlength="1"], input[type="tel"][maxlength="1"], input[type="number"][maxlength="1"], input[data-index], input[name*="code"][maxlength="1"], input[id*="code"][maxlength="1"], input[class*="pin"][maxlength="1"], input[class*="digit"][maxlength="1"], input[class*="otp"][maxlength="1"], input[autocomplete="one-time-code"][maxlength="1"]'
+            )
+          ).filter(el => el.offsetParent !== null && !el.disabled && !el.readOnly);
+
+          if (segmentedInputs.length >= 4 && segmentedInputs.length <= 8) {
+            const digits = otpCode.split('');
+            for (let i = 0; i < Math.min(digits.length, segmentedInputs.length); i++) {
+              fillInput(segmentedInputs[i], digits[i]);
+            }
+            return { success: true, count: segmentedInputs.length, type: 'segmented' };
+          }
+
+          // 2. Look for single dedicated 2FA inputs
+          const selectors = [
+            'input[autocomplete="one-time-code"]',
+            'input[autocomplete="2fa"]',
+            'input[name*="otp" i]',
+            'input[name*="totp" i]',
+            'input[name*="2fa" i]',
+            'input[name*="two_factor" i]',
+            'input[name*="token" i]',
+            'input[name*="auth_code" i]',
+            'input[name*="verification" i]',
+            'input[id*="otp" i]',
+            'input[id*="totp" i]',
+            'input[id*="2fa" i]',
+            'input[id*="token" i]',
+            'input[id*="verification" i]',
+            'input[placeholder*="code" i]',
+            'input[placeholder*="6-digit" i]',
+            'input[placeholder*="2fa" i]',
+            'input[placeholder*="authenticator" i]',
+            'input[aria-label*="code" i]',
+            'input[aria-label*="2fa" i]',
+            'input[aria-label*="verification" i]',
+            'input[inputmode="numeric"]'
+          ];
+
+          for (const selector of selectors) {
+            const inputs = Array.from(document.querySelectorAll(selector))
+              .filter(el => el.offsetParent !== null && !el.disabled && !el.readOnly && el.type !== 'hidden');
+            if (inputs.length > 0) {
+              const target = inputs[0];
+              fillInput(target, otpCode);
+              return { success: true, type: 'single' };
+            }
+          }
+
+          // 3. Fallback to active focused element if it is an input
+          const activeEl = document.activeElement;
+          if (activeEl && activeEl.tagName === 'INPUT' && activeEl.type !== 'hidden' && !activeEl.disabled && !activeEl.readOnly) {
+            fillInput(activeEl, otpCode);
+            return { success: true, type: 'focused' };
+          }
+
+          return { success: false };
+        },
+        args: [code]
+      });
+
+      if (results && results[0] && results[0].result && results[0].result.success) {
+        showToast(`⚡ Autofilled ${formattedCode} into page!`);
+      } else {
+        showToast(`Copied ${formattedCode} to clipboard (no 2FA field found)`);
+      }
+    } catch (err) {
+      console.warn('Autofill injection warning:', err);
+      showToast(`Copied ${formattedCode} to clipboard!`);
+    }
+  }
+
+  /**
+   * Updates Vim selected index visual outline & scrolls into view
+   */
+  function updateVimSelectionVisual() {
+    const cards = accountListEl.querySelectorAll('.totp-card');
+    cards.forEach((card, idx) => {
+      if (idx === selectedVimIndex) {
+        card.classList.add('vim-selected');
+        card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else {
+        card.classList.remove('vim-selected');
+      }
+    });
+  }
+
+  /**
+   * Moves Vim selection by delta (+1 down, -1 up)
+   */
+  function moveVimSelection(delta) {
+    if (currentDisplayedAccounts.length === 0) return;
+    selectedVimIndex = (selectedVimIndex + delta + currentDisplayedAccounts.length) % currentDisplayedAccounts.length;
+    updateVimSelectionVisual();
+  }
+
+  /**
+   * Sets Vim selection to a specific index
+   */
+  function setVimSelection(index) {
+    if (currentDisplayedAccounts.length === 0) return;
+    selectedVimIndex = Math.max(0, Math.min(index, currentDisplayedAccounts.length - 1));
+    updateVimSelectionVisual();
+  }
+
+  /**
+   * Setup Vim Navigation & Action Keybindings
+   */
+  function setupVimKeybindings() {
+    document.addEventListener('keydown', (e) => {
+      // Check if any modal is open
+      const openModals = [addModal, deleteModal, settingsModal, exportModal, decryptModal, shortcutsModal]
+        .filter(m => m && m.classList.contains('active'));
+
+      if (e.key === 'Escape') {
+        if (openModals.length > 0) {
+          openModals.forEach(m => closeModal(m));
+          e.preventDefault();
+          return;
+        }
+        if (document.activeElement === searchInputEl) {
+          searchInputEl.blur();
+          e.preventDefault();
+          return;
+        }
+        if (currentFilter) {
+          searchInputEl.value = '';
+          currentFilter = '';
+          searchClearBtn.classList.remove('active');
+          renderAccounts();
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // If a modal is open, let standard modal typing/tabbing proceed
+      if (openModals.length > 0) {
+        return;
+      }
+
+      // Check if user is typing inside an input/textarea/select
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+
+      if (isTyping) {
+        if (activeEl === searchInputEl && e.key === 'Enter') {
+          searchInputEl.blur();
+          if (currentDisplayedAccounts.length > 0) {
+            selectedVimIndex = 0;
+            updateVimSelectionVisual();
+          }
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // We are in NORMAL MODE
+      // 1. Focus Search: '/'
+      if (e.key === '/') {
+        e.preventDefault();
+        searchInputEl.focus();
+        searchInputEl.select();
+        return;
+      }
+
+      // 2. Show Help: '?'
+      if (e.key === '?') {
+        e.preventDefault();
+        openModal(shortcutsModal);
+        return;
+      }
+
+      // 3. Quick Number Shortcuts (1-9)
+      if (/^[1-9]$/.test(e.key)) {
+        const numIdx = parseInt(e.key, 10) - 1;
+        if (numIdx >= 0 && numIdx < currentDisplayedAccounts.length) {
+          e.preventDefault();
+          selectedVimIndex = numIdx;
+          updateVimSelectionVisual();
+          if (e.shiftKey) {
+            autofillAccount(currentDisplayedAccounts[numIdx].id);
+          } else {
+            copyAccountCode(currentDisplayedAccounts[numIdx].id);
+          }
+        }
+        return;
+      }
+
+      // 4. Down: 'j' or ArrowDown
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveVimSelection(1);
+        return;
+      }
+
+      // 5. Up: 'k' or ArrowUp
+      if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveVimSelection(-1);
+        return;
+      }
+
+      // 6. Top: 'gg'
+      if (e.key === 'g') {
+        if (gKeyPressTimer) {
+          clearTimeout(gKeyPressTimer);
+          gKeyPressTimer = null;
+          e.preventDefault();
+          setVimSelection(0);
+        } else {
+          gKeyPressTimer = setTimeout(() => {
+            gKeyPressTimer = null;
+          }, 400);
+        }
+        return;
+      }
+
+      // 7. Bottom: 'G'
+      if (e.key === 'G') {
+        e.preventDefault();
+        setVimSelection(currentDisplayedAccounts.length - 1);
+        return;
+      }
+
+      // 8. Yank / Copy: 'y', 'c', or 'Enter'
+      if (e.key === 'y' || e.key === 'c' || e.key === 'Enter') {
+        if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+          e.preventDefault();
+          if (e.shiftKey && e.key === 'Enter') {
+            autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
+          } else {
+            copyAccountCode(currentDisplayedAccounts[selectedVimIndex].id);
+          }
+        }
+        return;
+      }
+
+      // 9. Autofill: 'f' or 'a'
+      if (e.key === 'f' || e.key === 'a') {
+        if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+          e.preventDefault();
+          autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
+        }
+        return;
+      }
+
+      // 10. Pin / Unpin: 'p'
+      if (e.key === 'p') {
+        if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+          e.preventDefault();
+          togglePinAccount(currentDisplayedAccounts[selectedVimIndex].id);
+        }
+        return;
+      }
+
+      // 11. Delete: 'dd'
+      if (e.key === 'd') {
+        if (dKeyPressTimer) {
+          clearTimeout(dKeyPressTimer);
+          dKeyPressTimer = null;
+          if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            openDeleteModal(currentDisplayedAccounts[selectedVimIndex].id);
+          }
+        } else {
+          dKeyPressTimer = setTimeout(() => {
+            dKeyPressTimer = null;
+          }, 400);
+        }
+        return;
+      }
+
+      // 12. New / Add: 'o' or 'n'
+      if (e.key === 'o' || e.key === 'n') {
+        e.preventDefault();
+        openModal(addModal);
+        return;
+      }
+
+      // 13. Screen Scan: 's'
+      if (e.key === 's') {
+        e.preventDefault();
+        scanCurrentTabScreen();
+        return;
+      }
+
+      // 14. Theme Toggle: 't'
+      if (e.key === 't') {
+        e.preventDefault();
+        toggleTheme();
+        return;
+      }
+    });
+  }
+
+  /**
    * Show Toast Notification
    */
   function showToast(message) {
@@ -428,10 +892,17 @@
 
     // Account List Clicks (Delegation)
     accountListEl.addEventListener('click', (e) => {
+      const autofillBtn = e.target.closest('[data-action="autofill"]');
       const pinBtn = e.target.closest('[data-action="pin"]');
       const copyBtn = e.target.closest('[data-action="copy"]');
       const deleteBtn = e.target.closest('[data-action="delete"]');
       const card = e.target.closest('.totp-card');
+
+      if (autofillBtn) {
+        e.stopPropagation();
+        autofillAccount(autofillBtn.dataset.id);
+        return;
+      }
 
       if (pinBtn) {
         e.stopPropagation();
@@ -452,9 +923,34 @@
       }
 
       if (card) {
+        const cardIndex = parseInt(card.dataset.index, 10);
+        if (!isNaN(cardIndex)) {
+          selectedVimIndex = cardIndex;
+          updateVimSelectionVisual();
+        }
         copyAccountCode(card.dataset.id);
       }
     });
+
+    // Open Shortcuts Modal
+    if (btnOpenShortcuts) {
+      btnOpenShortcuts.addEventListener('click', () => openModal(shortcutsModal));
+    }
+    if (btnSettingsShortcuts) {
+      btnSettingsShortcuts.addEventListener('click', () => {
+        closeModal(settingsModal);
+        openModal(shortcutsModal);
+      });
+    }
+    if (rowOpenShortcuts) {
+      rowOpenShortcuts.addEventListener('click', () => {
+        closeModal(settingsModal);
+        openModal(shortcutsModal);
+      });
+    }
+    if (btnCloseShortcutsModal) {
+      btnCloseShortcutsModal.addEventListener('click', () => closeModal(shortcutsModal));
+    }
 
     // Open Add Modal
     btnOpenAddModal.addEventListener('click', () => openModal(addModal));
@@ -759,7 +1255,7 @@
     }
 
     // Close modals on overlay backdrop click
-    [addModal, deleteModal, settingsModal, exportModal, decryptModal].forEach(modal => {
+    [addModal, deleteModal, settingsModal, exportModal, decryptModal, shortcutsModal].forEach(modal => {
       if (modal) {
         modal.addEventListener('click', (e) => {
           if (e.target === modal) {
