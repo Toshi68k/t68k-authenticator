@@ -20,6 +20,9 @@
         </svg>
       </div>
       <h1 class="brand-title">T68k Authenticator</h1>
+      <button class="keymap-badge-btn" id="btn-header-keymap" title="Switch Keymap (Helix / Vim / Off)">
+        <span class="keymap-badge-text" id="header-keymap-text">HELIX</span>
+      </button>
     </div>
 
     <div class="header-actions">
@@ -53,6 +56,22 @@
   <!-- Global Synchronization Bar -->
   <div class="global-timer-bar">
     <div class="global-timer-fill" id="global-timer-fill"></div>
+  </div>
+
+  <!-- Helix Space Leader HUD Overlay -->
+  <div class="helix-leader-hud" id="helix-leader-hud">
+    <div class="helix-hud-badge">SPACE</div>
+    <div class="helix-hud-items">
+      <span class="helix-hud-item"><kbd>f</kbd> Search</span>
+      <span class="helix-hud-item"><kbd>y</kbd> Yank</span>
+      <span class="helix-hud-item"><kbd>a</kbd> Autofill</span>
+      <span class="helix-hud-item"><kbd>n</kbd> New</span>
+      <span class="helix-hud-item"><kbd>s</kbd> Scan</span>
+      <span class="helix-hud-item"><kbd>p</kbd> Pin</span>
+      <span class="helix-hud-item"><kbd>d</kbd> Del</span>
+      <span class="helix-hud-item"><kbd>t</kbd> Theme</span>
+      <span class="helix-hud-item"><kbd>?</kbd> Help</span>
+    </div>
   </div>
 
   <!-- Search & Filter Bar -->
@@ -267,7 +286,7 @@
 
       <div class="settings-content-wrapper">
         <div class="form-row" style="align-items: flex-start; gap: 12px;">
-          <div class="form-group" style="flex: 1; min-width: 110px;">
+          <div class="form-group" style="flex: 1; min-width: 105px;">
             <label class="form-label" for="select-theme-setting">Appearance</label>
             <select class="form-input" id="select-theme-setting" style="height: 32px; padding: 0 8px; font-size: 12px;">
               <option value="light">☀️ Light</option>
@@ -275,22 +294,31 @@
             </select>
           </div>
 
-          <div class="form-group" style="flex: 1.4;">
-            <label class="form-label">Theme Color</label>
-            <div class="theme-color-picker" id="theme-color-picker">
-              <button type="button" class="color-swatch active" data-color="green" aria-label="Emerald Green"
-                title="Emerald Green" style="--swatch-color: #10b981;"></button>
-              <button type="button" class="color-swatch" data-color="blue" aria-label="Sapphire Blue"
-                title="Sapphire Blue" style="--swatch-color: #3b82f6;"></button>
-              <button type="button" class="color-swatch" data-color="purple" aria-label="Royal Purple"
-                title="Royal Purple" style="--swatch-color: #8b5cf6;"></button>
-              <button type="button" class="color-swatch" data-color="cyan" aria-label="Cyan Teal" title="Cyan Teal"
-                style="--swatch-color: #06b6d4;"></button>
-              <button type="button" class="color-swatch" data-color="orange" aria-label="Sunset Amber"
-                title="Sunset Amber" style="--swatch-color: #f59e0b;"></button>
-              <button type="button" class="color-swatch" data-color="rose" aria-label="Ruby Rose" title="Ruby Rose"
-                style="--swatch-color: #f43f5e;"></button>
-            </div>
+          <div class="form-group" style="flex: 1.2; min-width: 125px;">
+            <label class="form-label" for="select-keymap-setting">Keymap Mode</label>
+            <select class="form-input" id="select-keymap-setting" style="height: 32px; padding: 0 8px; font-size: 12px;">
+              <option value="helix">🧬 Helix (Space leader)</option>
+              <option value="vim">🟩 Vim (dd, gg/G)</option>
+              <option value="disabled">🚫 Disabled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Theme Color</label>
+          <div class="theme-color-picker" id="theme-color-picker">
+            <button type="button" class="color-swatch active" data-color="green" aria-label="Emerald Green"
+              title="Emerald Green" style="--swatch-color: #10b981;"></button>
+            <button type="button" class="color-swatch" data-color="blue" aria-label="Sapphire Blue"
+              title="Sapphire Blue" style="--swatch-color: #3b82f6;"></button>
+            <button type="button" class="color-swatch" data-color="purple" aria-label="Royal Purple"
+              title="Royal Purple" style="--swatch-color: #8b5cf6;"></button>
+            <button type="button" class="color-swatch" data-color="cyan" aria-label="Cyan Teal" title="Cyan Teal"
+              style="--swatch-color: #06b6d4;"></button>
+            <button type="button" class="color-swatch" data-color="orange" aria-label="Sunset Amber"
+              title="Sunset Amber" style="--swatch-color: #f59e0b;"></button>
+            <button type="button" class="color-swatch" data-color="rose" aria-label="Ruby Rose" title="Ruby Rose"
+              style="--swatch-color: #f43f5e;"></button>
           </div>
         </div>
 
@@ -431,13 +459,13 @@
     </div>
   </div>
 
-  <!-- Keyboard & Vim Shortcuts Modal -->
+  <!-- Keyboard & Modal Shortcuts -->
   <div class="modal-overlay" id="shortcuts-modal">
-    <div class="modal-sheet" style="max-height: 520px;">
+    <div class="modal-sheet" style="max-height: 540px;">
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <h2 class="modal-title">Keyboard & Vim Shortcuts</h2>
-          <span class="vim-pill">VIM</span>
+          <h2 class="modal-title" id="shortcuts-modal-title">Keyboard Shortcuts</h2>
+          <span class="keymap-pill helix" id="shortcuts-modal-pill">HELIX</span>
         </div>
         <button class="btn-icon" id="btn-close-shortcuts-modal" aria-label="Close shortcuts modal">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -447,8 +475,55 @@
         </button>
       </div>
 
-      <div class="shortcuts-table-container">
-        <div class="shortcut-section-title">Navigation (Normal Mode)</div>
+      <!-- Segmented Keymap Tabs -->
+      <div class="keymap-tabs">
+        <button type="button" class="keymap-tab active" id="tab-keymap-helix" data-keymap="helix">
+          🧬 Helix Mode
+        </button>
+        <button type="button" class="keymap-tab" id="tab-keymap-vim" data-keymap="vim">
+          🟩 Vim Mode
+        </button>
+      </div>
+
+      <!-- Helix Cheat Sheet -->
+      <div class="shortcuts-table-container" id="shortcuts-content-helix">
+        <div class="shortcut-section-title">Helix Leader (<kbd>Space</kbd>)</div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>f</kbd></span><span class="shortcut-desc">Focus search / filter accounts</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>y</kbd></span><span class="shortcut-desc">Yank / copy active 2FA code</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>a</kbd></span><span class="shortcut-desc">⚡ Autofill code into active web page</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>n</kbd> / <kbd>o</kbd></span><span class="shortcut-desc">Add new 2FA account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>s</kbd></span><span class="shortcut-desc">Scan QR from active screen</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>p</kbd></span><span class="shortcut-desc">Toggle pin / unpin account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>d</kbd></span><span class="shortcut-desc">Delete selected account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>t</kbd></span><span class="shortcut-desc">Toggle light / dark theme</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Space</kbd> <kbd>?</kbd></span><span class="shortcut-desc">Show keymap cheat sheet</span></div>
+
+        <div class="shortcut-section-title">Helix Navigation & Selection</div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>j</kbd> / <kbd>k</kbd> or <kbd>↓</kbd> / <kbd>↑</kbd></span><span class="shortcut-desc">Move selection down / up</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>g</kbd><kbd>e</kbd> / <kbd>g</kbd><kbd>l</kbd> / <kbd>G</kbd></span><span class="shortcut-desc">Jump to bottom (Helix goto end)</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>g</kbd><kbd>g</kbd> / <kbd>g</kbd><kbd>h</kbd></span><span class="shortcut-desc">Jump to top (Helix goto top)</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>x</kbd></span><span class="shortcut-desc">Select / focus current card</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>/</kbd></span><span class="shortcut-desc">Focus search bar</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>1</kbd>–<kbd>9</kbd></span><span class="shortcut-desc">Quick jump & copy nth account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Esc</kbd></span><span class="shortcut-desc">Unfocus / cancel leader / close</span></div>
+
+        <div class="shortcut-section-title">Action on Selection (Helix Paradigm)</div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>y</kbd> / <kbd>c</kbd> or <kbd>Enter</kbd></span><span class="shortcut-desc">Yank / copy 2FA code</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>a</kbd> / <kbd>f</kbd></span><span class="shortcut-desc">⚡ Autofill code into web page</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>d</kbd></span><span class="shortcut-desc">Delete selected account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>p</kbd></span><span class="shortcut-desc">Toggle pin / unpin account</span></div>
+
+        <div class="shortcut-section-title">Global Shortcuts</div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>o</kbd> / <kbd>n</kbd></span><span class="shortcut-desc">Add new 2FA account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>s</kbd></span><span class="shortcut-desc">Scan QR from active screen</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>t</kbd></span><span class="shortcut-desc">Toggle light / dark theme</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>?</kbd></span><span class="shortcut-desc">Show / hide cheat sheet</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Open extension from anywhere</span></div>
+      </div>
+
+      <!-- Vim Cheat Sheet -->
+      <div class="shortcuts-table-container" id="shortcuts-content-vim" style="display: none;">
+        <div class="shortcut-section-title">Navigation (Vim Normal Mode)</div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>j</kbd> / <kbd>k</kbd> or <kbd>↓</kbd> / <kbd>↑</kbd></span><span class="shortcut-desc">Move selection down / up</span></div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>g</kbd><kbd>g</kbd> / <kbd>G</kbd></span><span class="shortcut-desc">Jump to top / bottom</span></div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>/</kbd></span><span class="shortcut-desc">Focus search bar</span></div>
@@ -459,13 +534,13 @@
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>y</kbd> / <kbd>c</kbd> or <kbd>Enter</kbd></span><span class="shortcut-desc">Yank / Copy active 2FA code</span></div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>f</kbd> / <kbd>a</kbd></span><span class="shortcut-desc">⚡ Autofill code into web page</span></div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>p</kbd></span><span class="shortcut-desc">Toggle pin / unpin account</span></div>
-        <div class="shortcut-row"><span class="shortcut-keys"><kbd>d</kbd><kbd>d</kbd></span><span class="shortcut-desc">Delete selected account</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>d</kbd><kbd>d</kbd></span><span class="shortcut-desc">Delete selected account (double d)</span></div>
 
         <div class="shortcut-section-title">Global Shortcuts</div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>o</kbd> / <kbd>n</kbd></span><span class="shortcut-desc">Add new 2FA account</span></div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>s</kbd></span><span class="shortcut-desc">Scan QR from active screen</span></div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>t</kbd></span><span class="shortcut-desc">Toggle light / dark theme</span></div>
-        <div class="shortcut-row"><span class="shortcut-keys"><kbd>?</kbd></span><span class="shortcut-desc">Show / hide this shortcuts cheat sheet</span></div>
+        <div class="shortcut-row"><span class="shortcut-keys"><kbd>?</kbd></span><span class="shortcut-desc">Show / hide shortcuts cheat sheet</span></div>
         <div class="shortcut-row"><span class="shortcut-keys"><kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Open extension from anywhere</span></div>
       </div>
     </div>
