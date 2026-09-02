@@ -14,19 +14,22 @@
 - 🔒 **Zero Telemetry & 100% Private**: All cryptographic operations execute locally using the browser's native **Web Crypto API** (`crypto.subtle`). No remote tracking, no analytics, no external servers.
 - ⚡ **1-Click 2FA Autofill**: Automatically detects and autofills 2FA code inputs (both standard inputs and segmented 6-digit PIN boxes) on active web pages in a single click or keyboard shortcut.
 - 🌐 **Smart Domain Matching**: Detects the current website domain (e.g. GitHub, AWS, Google, Discord) and automatically highlights and prioritizes matching accounts with a **"✨ Suggested"** badge.
-- ⌨️ **Full Vim-Style Keybindings**:
-  - `j` / `k` or `↓` / `↑`: Navigate up/down between accounts
-  - `gg` / `G`: Jump to top / bottom
-  - `y` / `c` or `Enter`: Yank / copy active 2FA code
-  - `f` / `a`: Autofill code into current web page
-  - `p`: Toggle pin/unpin account
-  - `dd`: Delete highlighted account
-  - `/`: Quick focus search bar
-  - `1`–`9`: Direct copy/autofill $n$-th account
-  - `o` / `n`: Open Add Account modal
-  - `s`: Trigger screen QR scan
-  - `t`: Toggle light/dark theme
-  - `?`: Show interactive Vim cheat sheet modal
+- ⌨️ **Helix & Vim Modal Keymap Modes**:
+  - **Helix Mode** (Selection → Action paradigm & `<Space>` leader):
+    - `Space` leader menu: `<Space> f` (search), `<Space> y` (yank/copy), `<Space> a` (autofill), `<Space> n` / `<Space> o` (new account), `<Space> s` (screen scan), `<Space> p` (pin), `<Space> d` (delete), `<Space> t` (theme toggle), `<Space> ?` (cheat sheet)
+    - `j` / `k` or `↓` / `↑`: Navigate down/up between accounts
+    - `ge` / `gl` / `G`: Jump to bottom (Helix goto end)
+    - `gg` / `gh`: Jump to top (Helix goto start)
+    - `x`: Select / highlight active card
+    - `y` / `c` or `Enter`: Yank / copy active 2FA code
+    - `a` / `f`: Autofill code into active web page
+    - `d`: Delete selected account directly
+    - `p`: Toggle pin / unpin account
+    - `/`: Focus search bar
+    - `1`–`9`: Direct copy/autofill $n$-th account
+    - `?`: Open interactive Helix & Vim cheat sheet modal
+  - **Vim Mode** (Classic modal navigation):
+    - `j` / `k`, `gg` / `G`, `dd` (double d for delete), `y` / `c`, `f` / `a`, `p`, `o` / `n`, `s`, `t`, `/`, `?`
   - Global `Alt + Shift + A` (or `Option + Shift + A` on Mac): Open extension popup from anywhere
 - 📸 **Instant Screen QR Scanner**: Automatically scans the active tab for two-factor QR codes using `chrome.tabs.captureVisibleTab` with zero manual typing.
 - 📁 **QR Image Drag & Drop**: Drop screenshot files or QR image uploads directly into the extension for immediate parsing.

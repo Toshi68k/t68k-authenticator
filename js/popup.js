@@ -53,11 +53,23 @@
   const backupFileInput = document.getElementById('backup-file-input');
   const toggleCloudSync = document.getElementById('toggle-cloud-sync');
 
-  // Shortcuts Modal Elements
+  // Shortcuts & Keymap Modal Elements
   const btnOpenShortcuts = document.getElementById('btn-open-shortcuts');
   const btnSettingsShortcuts = document.getElementById('btn-settings-shortcuts');
   const rowOpenShortcuts = document.getElementById('row-open-shortcuts');
   const btnCloseShortcutsModal = document.getElementById('btn-close-shortcuts-modal');
+  const selectKeymapSetting = document.getElementById('select-keymap-setting');
+  const btnHeaderKeymap = document.getElementById('btn-header-keymap');
+  const headerKeymapText = document.getElementById('header-keymap-text');
+  const shortcutsModalPill = document.getElementById('shortcuts-modal-pill');
+  const shortcutsModalTitle = document.getElementById('shortcuts-modal-title');
+  const helixLeaderHud = document.getElementById('helix-leader-hud');
+  const tabKeymapHelix = document.getElementById('tab-keymap-helix');
+  const tabKeymapVim = document.getElementById('tab-keymap-vim');
+  const shortcutsContentHelix = document.getElementById('shortcuts-content-helix');
+  const shortcutsContentVim = document.getElementById('shortcuts-content-vim');
+  const searchKbdHint = document.getElementById('search-kbd-hint');
+  const settingShortcutsDesc = document.getElementById('setting-shortcuts-desc');
 
   // Export Modal Elements
   const exportModal = document.getElementById('export-modal');
@@ -96,11 +108,16 @@
   let activeTabUrl = '';
   let activeTabId = null;
 
-  // Vim Mode & Selection State
+  // Keymap Mode & Selection State
+  let currentKeymapMode = 'helix';
   let selectedVimIndex = 0;
   let currentDisplayedAccounts = [];
   let gKeyPressTimer = null;
   let dKeyPressTimer = null;
+  let spaceLeaderActive = false;
+  let spaceLeaderTimeout = null;
+  let helixGPrefixActive = false;
+  let helixGPrefixTimeout = null;
 
   /**
    * Initialize Application
@@ -108,9 +125,10 @@
   async function init() {
     await fetchActiveTabInfo();
     await initTheme();
+    await initKeymapSetting();
     await initSyncSetting();
     setupEventListeners();
-    setupVimKeybindings();
+    setupKeybindings();
     await loadAccounts();
     startTimerTicker();
   }
@@ -132,6 +150,136 @@
     if (toggleCloudSync) {
       const isSync = await T68kAuthStorage.getSyncEnabled();
       toggleCloudSync.checked = isSync;
+    }
+  }
+
+  /**
+   * Initialize keymap setting from storage
+   */
+  async function initKeymapSetting() {
+    currentKeymapMode = await T68kAuthStorage.getKeymapMode();
+    applyKeymapMode(currentKeymapMode, false);
+  }
+
+  /**
+   * Applies the keymap mode to state, UI elements, badges and storage
+   */
+  function applyKeymapMode(mode, save = true) {
+    currentKeymapMode = mode;
+    if (selectKeymapSetting) {
+      selectKeymapSetting.value = mode;
+    }
+
+    if (headerKeymapText) {
+      if (mode === 'helix') {
+        headerKeymapText.textContent = 'HELIX';
+      } else if (mode === 'vim') {
+        headerKeymapText.textContent = 'VIM';
+      } else {
+        headerKeymapText.textContent = 'OFF';
+      }
+    }
+
+    if (btnHeaderKeymap) {
+      btnHeaderKeymap.className = 'keymap-badge-btn ' + mode;
+      btnHeaderKeymap.title = `Current Keymap: ${mode.toUpperCase()} (Click to toggle)`;
+    }
+
+    if (shortcutsModalPill) {
+      if (mode === 'helix') {
+        shortcutsModalPill.textContent = 'HELIX';
+        shortcutsModalPill.className = 'keymap-pill helix';
+      } else if (mode === 'vim') {
+        shortcutsModalPill.textContent = 'VIM';
+        shortcutsModalPill.className = 'keymap-pill vim';
+      } else {
+        shortcutsModalPill.textContent = 'OFF';
+        shortcutsModalPill.className = 'keymap-pill disabled';
+      }
+    }
+
+    if (searchKbdHint) {
+      if (mode === 'disabled') {
+        searchKbdHint.style.display = 'none';
+      } else {
+        searchKbdHint.style.display = 'inline-block';
+        searchKbdHint.textContent = '/';
+        searchKbdHint.title = mode === 'helix' ? 'Press / or Space f to search' : 'Press / to search';
+      }
+    }
+
+    if (settingShortcutsDesc) {
+      if (mode === 'helix') {
+        settingShortcutsDesc.textContent = 'Helix keybindings & quick actions cheat sheet';
+      } else if (mode === 'vim') {
+        settingShortcutsDesc.textContent = 'Vim keybindings & quick actions cheat sheet';
+      } else {
+        settingShortcutsDesc.textContent = 'Keyboard navigation cheat sheet';
+      }
+    }
+
+    // Switch cheat sheet tab to match active mode
+    switchShortcutsTab(mode === 'vim' ? 'vim' : 'helix');
+
+    if (save) {
+      T68kAuthStorage.setKeymapMode(mode);
+    }
+  }
+
+  /**
+   * Switches active tab inside the Shortcuts Modal
+   */
+  function switchShortcutsTab(tabName) {
+    if (!tabKeymapHelix || !tabKeymapVim || !shortcutsContentHelix || !shortcutsContentVim) return;
+
+    if (tabName === 'vim') {
+      tabKeymapVim.classList.add('active');
+      tabKeymapHelix.classList.remove('active');
+      shortcutsContentVim.style.display = 'flex';
+      shortcutsContentHelix.style.display = 'none';
+      if (shortcutsModalTitle) shortcutsModalTitle.textContent = 'Vim Shortcuts';
+      if (shortcutsModalPill) {
+        shortcutsModalPill.textContent = 'VIM';
+        shortcutsModalPill.className = 'keymap-pill vim';
+      }
+    } else {
+      tabKeymapHelix.classList.add('active');
+      tabKeymapVim.classList.remove('active');
+      shortcutsContentHelix.style.display = 'flex';
+      shortcutsContentVim.style.display = 'none';
+      if (shortcutsModalTitle) shortcutsModalTitle.textContent = 'Helix Shortcuts';
+      if (shortcutsModalPill) {
+        shortcutsModalPill.textContent = 'HELIX';
+        shortcutsModalPill.className = 'keymap-pill helix';
+      }
+    }
+  }
+
+  /**
+   * Activates Helix Space Leader HUD overlay
+   */
+  function activateSpaceLeader() {
+    spaceLeaderActive = true;
+    if (helixLeaderHud) {
+      helixLeaderHud.classList.add('active');
+    }
+    if (spaceLeaderTimeout) clearTimeout(spaceLeaderTimeout);
+    spaceLeaderTimeout = setTimeout(() => {
+      deactivateSpaceLeader();
+    }, 3500);
+  }
+
+  /**
+   * Deactivates Helix Space Leader HUD overlay
+   */
+  function deactivateSpaceLeader() {
+    spaceLeaderActive = false;
+    if (helixLeaderHud) {
+      helixLeaderHud.classList.remove('active');
+    }
+    if (spaceLeaderTimeout) {
+      clearTimeout(spaceLeaderTimeout);
+      spaceLeaderTimeout = null;
     }
   }
 
@@ -657,25 +805,40 @@
   }
 
   /**
-   * Setup Vim Navigation & Action Keybindings
+   * Setup Modal Keyboard Navigation & Action Keybindings (Helix / Vim / Standard)
    */
-  function setupVimKeybindings() {
+  function setupKeybindings() {
     document.addEventListener('keydown', (e) => {
       // Check if any modal is open
       const openModals = [addModal, deleteModal, settingsModal, exportModal, decryptModal, shortcutsModal]
         .filter(m => m && m.classList.contains('active'));
 
       if (e.key === 'Escape') {
+        if (spaceLeaderActive) {
+          deactivateSpaceLeader();
+          e.preventDefault();
+          return;
+        }
+
+        if (helixGPrefixActive) {
+          helixGPrefixActive = false;
+          if (helixGPrefixTimeout) clearTimeout(helixGPrefixTimeout);
+          e.preventDefault();
+          return;
+        }
+
         if (openModals.length > 0) {
           openModals.forEach(m => closeModal(m));
           e.preventDefault();
           return;
         }
+
         if (document.activeElement === searchInputEl) {
           searchInputEl.blur();
           e.preventDefault();
           return;
         }
+
         if (currentFilter) {
           searchInputEl.value = '';
           currentFilter = '';
@@ -707,8 +870,14 @@
         return;
       }
 
-      // We are in NORMAL MODE
-      // 1. Focus Search: '/'
+      // Global Help shortcut available in all modes
+      if (e.key === '?') {
+        e.preventDefault();
+        openModal(shortcutsModal);
+        return;
+      }
+
+      // Global Search shortcut
       if (e.key === '/') {
         e.preventDefault();
         searchInputEl.focus();
@@ -716,132 +885,316 @@
         return;
       }
 
-      // 2. Show Help: '?'
-      if (e.key === '?') {
-        e.preventDefault();
-        openModal(shortcutsModal);
+      // If keymap is disabled, don't intercept normal editor keys
+      if (currentKeymapMode === 'disabled') {
         return;
       }
 
-      // 3. Quick Number Shortcuts (1-9)
-      if (/^[1-9]$/.test(e.key)) {
-        const numIdx = parseInt(e.key, 10) - 1;
-        if (numIdx >= 0 && numIdx < currentDisplayedAccounts.length) {
+      // ==========================================
+      // HELIX KEYMAP MODE (Selection -> Action)
+      // ==========================================
+      if (currentKeymapMode === 'helix') {
+        // 1. Space Leader Mode
+        if (spaceLeaderActive) {
           e.preventDefault();
-          selectedVimIndex = numIdx;
+          const key = e.key;
+          deactivateSpaceLeader();
+
+          if (key === 'f') {
+            searchInputEl.focus();
+            searchInputEl.select();
+          } else if (key === 'y') {
+            if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+              copyAccountCode(currentDisplayedAccounts[selectedVimIndex].id);
+            }
+          } else if (key === 'a') {
+            if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+              autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
+            }
+          } else if (key === 'n' || key === 'o') {
+            openModal(addModal);
+          } else if (key === 's') {
+            scanCurrentTabScreen();
+          } else if (key === 'p') {
+            if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+              togglePinAccount(currentDisplayedAccounts[selectedVimIndex].id);
+            }
+          } else if (key === 'd') {
+            if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+              openDeleteModal(currentDisplayedAccounts[selectedVimIndex].id);
+            }
+          } else if (key === 't') {
+            toggleTheme();
+          } else if (key === '?' || key === 'h') {
+            openModal(shortcutsModal);
+          }
+          return;
+        }
+
+        // 2. Helix 'g' Goto Prefix
+        if (helixGPrefixActive) {
+          e.preventDefault();
+          helixGPrefixActive = false;
+          if (helixGPrefixTimeout) {
+            clearTimeout(helixGPrefixTimeout);
+            helixGPrefixTimeout = null;
+          }
+
+          if (e.key === 'g' || e.key === 'h') {
+            // Helix goto top / start
+            setVimSelection(0);
+          } else if (e.key === 'e' || e.key === 'l') {
+            // Helix goto bottom / end
+            setVimSelection(currentDisplayedAccounts.length - 1);
+          }
+          return;
+        }
+
+        // 3. Space Leader Trigger
+        if (e.key === ' ') {
+          e.preventDefault();
+          activateSpaceLeader();
+          return;
+        }
+
+        // 4. Navigation
+        if (e.key === 'j' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          moveVimSelection(1);
+          return;
+        }
+
+        if (e.key === 'k' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          moveVimSelection(-1);
+          return;
+        }
+
+        if (e.key === 'g') {
+          e.preventDefault();
+          helixGPrefixActive = true;
+          helixGPrefixTimeout = setTimeout(() => {
+            helixGPrefixActive = false;
+          }, 450);
+          return;
+        }
+
+        if (e.key === 'G') {
+          e.preventDefault();
+          setVimSelection(currentDisplayedAccounts.length - 1);
+          return;
+        }
+
+        // 5. Select / Highlight card: 'x'
+        if (e.key === 'x') {
+          e.preventDefault();
           updateVimSelectionVisual();
-          if (e.shiftKey) {
-            autofillAccount(currentDisplayedAccounts[numIdx].id);
-          } else {
-            copyAccountCode(currentDisplayedAccounts[numIdx].id);
+          return;
+        }
+
+        // 6. Number jump (1-9)
+        if (/^[1-9]$/.test(e.key)) {
+          const numIdx = parseInt(e.key, 10) - 1;
+          if (numIdx >= 0 && numIdx < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            selectedVimIndex = numIdx;
+            updateVimSelectionVisual();
+            if (e.shiftKey) {
+              autofillAccount(currentDisplayedAccounts[numIdx].id);
+            } else {
+              copyAccountCode(currentDisplayedAccounts[numIdx].id);
+            }
           }
+          return;
         }
-        return;
-      }
 
-      // 4. Down: 'j' or ArrowDown
-      if (e.key === 'j' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        moveVimSelection(1);
-        return;
-      }
-
-      // 5. Up: 'k' or ArrowUp
-      if (e.key === 'k' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        moveVimSelection(-1);
-        return;
-      }
-
-      // 6. Top: 'gg'
-      if (e.key === 'g') {
-        if (gKeyPressTimer) {
-          clearTimeout(gKeyPressTimer);
-          gKeyPressTimer = null;
-          e.preventDefault();
-          setVimSelection(0);
-        } else {
-          gKeyPressTimer = setTimeout(() => {
-            gKeyPressTimer = null;
-          }, 400);
+        // 7. Actions on Selection
+        // Yank: 'y', 'c', 'Enter'
+        if (e.key === 'y' || e.key === 'c' || e.key === 'Enter') {
+          if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            if (e.shiftKey && e.key === 'Enter') {
+              autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
+            } else {
+              copyAccountCode(currentDisplayedAccounts[selectedVimIndex].id);
+            }
+          }
+          return;
         }
-        return;
-      }
 
-      // 7. Bottom: 'G'
-      if (e.key === 'G') {
-        e.preventDefault();
-        setVimSelection(currentDisplayedAccounts.length - 1);
-        return;
-      }
-
-      // 8. Yank / Copy: 'y', 'c', or 'Enter'
-      if (e.key === 'y' || e.key === 'c' || e.key === 'Enter') {
-        if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
-          e.preventDefault();
-          if (e.shiftKey && e.key === 'Enter') {
+        // Autofill: 'a' or 'f'
+        if (e.key === 'a' || e.key === 'f') {
+          if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+            e.preventDefault();
             autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
-          } else {
-            copyAccountCode(currentDisplayedAccounts[selectedVimIndex].id);
           }
+          return;
         }
-        return;
-      }
 
-      // 9. Autofill: 'f' or 'a'
-      if (e.key === 'f' || e.key === 'a') {
-        if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
-          e.preventDefault();
-          autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
-        }
-        return;
-      }
-
-      // 10. Pin / Unpin: 'p'
-      if (e.key === 'p') {
-        if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
-          e.preventDefault();
-          togglePinAccount(currentDisplayedAccounts[selectedVimIndex].id);
-        }
-        return;
-      }
-
-      // 11. Delete: 'dd'
-      if (e.key === 'd') {
-        if (dKeyPressTimer) {
-          clearTimeout(dKeyPressTimer);
-          dKeyPressTimer = null;
+        // Delete selection directly: 'd' (Helix Selection-first paradigm)
+        if (e.key === 'd') {
           if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
             e.preventDefault();
             openDeleteModal(currentDisplayedAccounts[selectedVimIndex].id);
           }
-        } else {
-          dKeyPressTimer = setTimeout(() => {
-            dKeyPressTimer = null;
-          }, 400);
+          return;
         }
+
+        // Toggle Pin: 'p'
+        if (e.key === 'p') {
+          if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            togglePinAccount(currentDisplayedAccounts[selectedVimIndex].id);
+          }
+          return;
+        }
+
+        // Global actions: Add ('o' / 'n'), Scan ('s'), Theme ('t')
+        if (e.key === 'o' || e.key === 'n') {
+          e.preventDefault();
+          openModal(addModal);
+          return;
+        }
+
+        if (e.key === 's') {
+          e.preventDefault();
+          scanCurrentTabScreen();
+          return;
+        }
+
+        if (e.key === 't') {
+          e.preventDefault();
+          toggleTheme();
+          return;
+        }
+
         return;
       }
 
-      // 12. New / Add: 'o' or 'n'
-      if (e.key === 'o' || e.key === 'n') {
-        e.preventDefault();
-        openModal(addModal);
-        return;
-      }
+      // ==========================================
+      // VIM KEYMAP MODE
+      // ==========================================
+      if (currentKeymapMode === 'vim') {
+        // Quick Number Shortcuts (1-9)
+        if (/^[1-9]$/.test(e.key)) {
+          const numIdx = parseInt(e.key, 10) - 1;
+          if (numIdx >= 0 && numIdx < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            selectedVimIndex = numIdx;
+            updateVimSelectionVisual();
+            if (e.shiftKey) {
+              autofillAccount(currentDisplayedAccounts[numIdx].id);
+            } else {
+              copyAccountCode(currentDisplayedAccounts[numIdx].id);
+            }
+          }
+          return;
+        }
 
-      // 13. Screen Scan: 's'
-      if (e.key === 's') {
-        e.preventDefault();
-        scanCurrentTabScreen();
-        return;
-      }
+        // Down: 'j' or ArrowDown
+        if (e.key === 'j' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          moveVimSelection(1);
+          return;
+        }
 
-      // 14. Theme Toggle: 't'
-      if (e.key === 't') {
-        e.preventDefault();
-        toggleTheme();
-        return;
+        // Up: 'k' or ArrowUp
+        if (e.key === 'k' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          moveVimSelection(-1);
+          return;
+        }
+
+        // Top: 'gg'
+        if (e.key === 'g') {
+          if (gKeyPressTimer) {
+            clearTimeout(gKeyPressTimer);
+            gKeyPressTimer = null;
+            e.preventDefault();
+            setVimSelection(0);
+          } else {
+            gKeyPressTimer = setTimeout(() => {
+              gKeyPressTimer = null;
+            }, 400);
+          }
+          return;
+        }
+
+        // Bottom: 'G'
+        if (e.key === 'G') {
+          e.preventDefault();
+          setVimSelection(currentDisplayedAccounts.length - 1);
+          return;
+        }
+
+        // Yank / Copy: 'y', 'c', or 'Enter'
+        if (e.key === 'y' || e.key === 'c' || e.key === 'Enter') {
+          if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            if (e.shiftKey && e.key === 'Enter') {
+              autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
+            } else {
+              copyAccountCode(currentDisplayedAccounts[selectedVimIndex].id);
+            }
+          }
+          return;
+        }
+
+        // Autofill: 'f' or 'a'
+        if (e.key === 'f' || e.key === 'a') {
+          if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            autofillAccount(currentDisplayedAccounts[selectedVimIndex].id);
+          }
+          return;
+        }
+
+        // Pin / Unpin: 'p'
+        if (e.key === 'p') {
+          if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+            e.preventDefault();
+            togglePinAccount(currentDisplayedAccounts[selectedVimIndex].id);
+          }
+          return;
+        }
+
+        // Delete: 'dd'
+        if (e.key === 'd') {
+          if (dKeyPressTimer) {
+            clearTimeout(dKeyPressTimer);
+            dKeyPressTimer = null;
+            if (currentDisplayedAccounts.length > 0 && selectedVimIndex >= 0 && selectedVimIndex < currentDisplayedAccounts.length) {
+              e.preventDefault();
+              openDeleteModal(currentDisplayedAccounts[selectedVimIndex].id);
+            }
+          } else {
+            dKeyPressTimer = setTimeout(() => {
+              dKeyPressTimer = null;
+            }, 400);
+          }
+          return;
+        }
+
+        // New / Add: 'o' or 'n'
+        if (e.key === 'o' || e.key === 'n') {
+          e.preventDefault();
+          openModal(addModal);
+          return;
+        }
+
+        // Screen Scan: 's'
+        if (e.key === 's') {
+          e.preventDefault();
+          scanCurrentTabScreen();
+          return;
+        }
+
+        // Theme Toggle: 't'
+        if (e.key === 't') {
+          e.preventDefault();
+          toggleTheme();
+          return;
+        }
       }
     });
   }
@@ -1217,6 +1570,33 @@
         applyTheme(e.target.value, true);
         showToast(`${e.target.value === 'light' ? 'Light' : 'Dark'} theme activated`);
       });
+    }
+
+    // Keymap Mode Setting
+    if (selectKeymapSetting) {
+      selectKeymapSetting.addEventListener('change', (e) => {
+        applyKeymapMode(e.target.value, true);
+        const nameMap = { helix: '🧬 Helix Mode', vim: '🟩 Vim Mode', disabled: '🚫 Keymap Disabled' };
+        showToast(`${nameMap[e.target.value] || e.target.value} active`);
+      });
+    }
+
+    // Header Keymap Toggle Button
+    if (btnHeaderKeymap) {
+      btnHeaderKeymap.addEventListener('click', () => {
+        const nextMode = currentKeymapMode === 'helix' ? 'vim' : (currentKeymapMode === 'vim' ? 'disabled' : 'helix');
+        applyKeymapMode(nextMode, true);
+        const nameMap = { helix: '🧬 Helix Mode', vim: '🟩 Vim Mode', disabled: '🚫 Keymap Disabled' };
+        showToast(`${nameMap[nextMode] || nextMode} active`);
+      });
+    }
+
+    // Shortcuts Modal Keymap Tabs
+    if (tabKeymapHelix) {
+      tabKeymapHelix.addEventListener('click', () => switchShortcutsTab('helix'));
+    }
+    if (tabKeymapVim) {
+      tabKeymapVim.addEventListener('click', () => switchShortcutsTab('vim'));
     }
 
     // Theme Color Swatches

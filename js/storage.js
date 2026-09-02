@@ -27,14 +27,14 @@
     return new Promise((resolve) => {
       if (isChromeStorage) {
         chrome.storage.local.get([SETTINGS_KEY], (res) => {
-          resolve(res && res[SETTINGS_KEY] ? res[SETTINGS_KEY] : { theme: 'light', themeColor: 'green', syncEnabled: false });
+          resolve(res && res[SETTINGS_KEY] ? res[SETTINGS_KEY] : { theme: 'light', themeColor: 'green', syncEnabled: false, keymapMode: 'helix' });
         });
       } else {
         try {
           const raw = localStorage.getItem(SETTINGS_KEY);
-          resolve(raw ? JSON.parse(raw) : { theme: 'light', themeColor: 'green', syncEnabled: false });
+          resolve(raw ? JSON.parse(raw) : { theme: 'light', themeColor: 'green', syncEnabled: false, keymapMode: 'helix' });
         } catch {
-          resolve({ theme: 'light', themeColor: 'green', syncEnabled: false });
+          resolve({ theme: 'light', themeColor: 'green', syncEnabled: false, keymapMode: 'helix' });
         }
       }
     });
@@ -470,6 +470,22 @@
     return true;
   }
 
+  /**
+   * Retrieves user keymap mode preference ('helix', 'vim', 'disabled')
+   */
+  async function getKeymapMode() {
+    const settings = await getSettings();
+    return settings.keymapMode || 'helix';
+  }
+
+  /**
+   * Saves user keymap mode preference
+   */
+  async function setKeymapMode(keymapMode) {
+    await saveSettings({ keymapMode });
+    return true;
+  }
+
   global.T68kAuthStorage = {
     getAccounts,
     saveAccounts,
@@ -484,6 +500,8 @@
     getThemeColor,
     setThemeColor,
     getSyncEnabled,
-    setSyncEnabled
+    setSyncEnabled,
+    getKeymapMode,
+    setKeymapMode
   };
 })(typeof window !== 'undefined' ? window : this);

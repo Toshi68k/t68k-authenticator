@@ -1421,16 +1421,190 @@ body.theme-light .totp-card.vim-selected {
   box-shadow: 0 0 8px var(--accent-glow);
 }
 
-/* Vim Pill in Modals */
-.vim-pill {
+/* Keymap Pill in Modals & Header */
+.keymap-pill, .vim-pill {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   background: var(--accent-primary);
   color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.keymap-pill.helix {
+  background: linear-gradient(135deg, #8b5cf6, var(--accent-primary));
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+}
+
+.keymap-pill.vim {
+  background: var(--accent-primary);
+}
+
+.keymap-pill.disabled {
+  background: var(--text-muted);
+}
+
+/* Header Keymap Mode Badge Button */
+.keymap-badge-btn {
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  border-radius: 12px;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.keymap-badge-btn:hover {
+  border-color: var(--accent-border);
+  color: var(--accent-primary);
+  background: var(--accent-subtle);
+  transform: translateY(-1px);
+}
+
+body.theme-light .keymap-badge-btn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.theme-light .keymap-badge-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent-border);
+}
+
+/* Helix Space Leader HUD Overlay */
+.helix-leader-hud {
+  position: absolute;
+  top: 48px;
+  left: 12px;
+  right: 12px;
+  z-index: 90;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px var(--accent-glow);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  animation: slideDownFade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.theme-light .helix-leader-hud {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--accent-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 10px var(--accent-glow);
+}
+
+.helix-leader-hud.active {
+  display: flex;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.helix-hud-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, #8b5cf6, var(--accent-primary));
   padding: 2px 6px;
   border-radius: 4px;
   letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.helix-hud-items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.helix-hud-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.helix-hud-item kbd {
+  padding: 1px 4px;
+  font-size: 10px;
+}
+
+/* Modal Keymap Switcher Tabs */
+.keymap-tabs {
+  display: flex;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 10px;
+  gap: 4px;
+}
+
+body.theme-light .keymap-tabs {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.keymap-tab {
+  flex: 1;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.keymap-tab:hover {
+  color: var(--text-primary);
+}
+
+.keymap-tab.active {
+  background: var(--bg-card);
+  color: var(--accent-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+body.theme-light .keymap-tab.active {
+  background: #ffffff;
+  color: var(--accent-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 /* Shortcuts Cheat Sheet Modal Content */
@@ -1438,7 +1612,7 @@ body.theme-light .totp-card.vim-selected {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 420px;
+  max-height: 400px;
   overflow-y: auto;
   padding-right: 4px;
 }
